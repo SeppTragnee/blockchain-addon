@@ -1,14 +1,11 @@
 ARG BUILD_FROM
-FROM $BUILD_FROM
+FROM ${BUILD_FROM}
 
-# Basisinstallatie python en pip
-RUN apk add --no-cache python3 py3-pip
-
-# Installeer/upgrade pip + wheel (vereist!)
-RUN pip3 install --upgrade pip wheel
-
-# Installeer alleen requests (meer heb je momenteel niet nodig)
-RUN pip3 install requests
+#instalem python, pip i llibreries que necessitarem
+RUN apt update \
+    && apt install -y dos2unix python3 python3-pip \
+    && pip install --upgrade pip \
+    && pip install requests pandas scikit-learn psutil numpy holidays tomli func_timeout
 
 # Kopieer bestanden naar container
 COPY run.sh /run.sh
