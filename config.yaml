@@ -1,0 +1,13 @@
+name: "Blockchain Energy Certifier"
+description: "An addon to certify energy consumption in the blockchain."
+version: "1.0"
+slug: "blockchain_energy"
+arch:
+  - amd64
+  - armv7
+  - aarch64
+hassio_api: true
+homeassistant_api: true
+startup: services
+init: false
+ingress: false
