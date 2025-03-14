@@ -2,7 +2,7 @@ ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
 # Installeer Python en pip
-RUN apt update && apt install -y python3 python3-pip
+RUN apk update && apk add --no-cache python3 py3-pip
 
 # Installeer Python-pakketten (één voor één om problemen te isoleren)
 RUN pip3 install requests
