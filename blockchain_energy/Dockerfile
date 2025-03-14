@@ -12,7 +12,7 @@ RUN pip3 install requests
 
 # Kopieer bestanden naar container
 COPY run.sh /run.sh
-COPY scripts/main.py /scripts/main.py
+COPY scripts /scripts
 COPY config.yaml /config.yaml
 
 # Permissies instellen
