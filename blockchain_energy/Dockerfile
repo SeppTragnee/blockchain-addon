@@ -1,21 +1,21 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
-# Install dependencies
-RUN apk add --no-cache python3 py3-pip
+# Alpine Linux, gebruikt apk
+RUN apk add --no-cache python3 py3-pip python3-dev build-base
 
-# Upgrade pip eerst (BELANGRIJK!)
-RUN pip3 install --upgrade pip
+# Upgrade pip en voeg wheel toe (belangrijk)
+RUN pip3 install --upgrade pip wheel
 
-# Install required Python packages
+# Installeer Python pakketten
 RUN pip3 install requests
 
-# Copy necessary files
+# Kopieer bestanden
 COPY run.sh /run.sh
 COPY scripts/main.py /scripts/main.py
 
-# Set permissions
+# Geef uitvoeringsrechten
 RUN chmod +x /run.sh
 
-# Start the addon
+# Start de addon
 CMD [ "/run.sh" ]
