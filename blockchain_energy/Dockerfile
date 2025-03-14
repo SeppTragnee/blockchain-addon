@@ -1,33 +1,22 @@
 ARG BUILD_FROM
-FROM ${BUILD_FROM}
+FROM $BUILD_FROM
 
-# Installeer Python en pip
-RUN apk update && apk add --no-cache python3 py3-pip
+# Basisinstallatie python en pip
+RUN apk add --no-cache python3 py3-pip
 
-# Installeer Python-pakketten (één voor één om problemen te isoleren)
+# Installeer/upgrade pip + wheel (vereist!)
+RUN pip3 install --upgrade pip wheel
+
+# Installeer alleen requests (meer heb je momenteel niet nodig)
 RUN pip3 install requests
-RUN pip3 install pandas
-RUN pip3 install scikit-learn
-RUN pip3 install psutil
-RUN pip3 install numpy
-RUN pip3 install holidays
-RUN pip3 install tomli
-RUN pip3 install func_timeout
 
-# Voeg bestanden toe
-ADD ./rootfs/server.py /server.py
-ADD ./rootfs/bottle.py /bottle.py
-ADD ./rootfs/sqlDB.py /sqlDB.py
-COPY ./rootfs/www/www/ /www/
-COPY ./rootfs/images/ /images/
-COPY ./rootfs/optimalScheduler/ /optimalScheduler/
-
-# Kopieer configuratiebestand
+# Kopieer bestanden naar container
+COPY run.sh /run.sh
+COPY scripts/main.py /scripts/main.py
 COPY config.yaml /config.yaml
 
-# Kopieer en geef uitvoeringsrechten aan het startscript
-COPY ./rootfs/run.sh /run.sh
-RUN chmod a+x /run.sh
+# Permissies instellen
+RUN chmod +x /run.sh
 
-# Start de add-on
-CMD ["/run.sh"]
+# Start add-on
+CMD [ "/run.sh" ]
