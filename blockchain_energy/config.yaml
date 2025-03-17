@@ -11,3 +11,5 @@ homeassistant_api: true
 startup: services
 init: false
 ingress: false
+environment:
+  BLOCKCHAIN_PRIVATE_KEY: "!secret blockchain_private_key"
