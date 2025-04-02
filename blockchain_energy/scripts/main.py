@@ -12,7 +12,7 @@ def log(msg, level="info"):
     }
     print(f"{symbols.get(level, '[ ]')} {msg}")
 
-def load_secrets(path="secrets.json"):
+def load_secrets(path="/config/secrets.json"):
     with open(path, "r") as f:
         return json.load(f)
 
