@@ -70,7 +70,7 @@ if __name__ == "__main__":
     log("Certification gestart", "info")
     try:
         # Stap 1: Geheime variabelen laden uit secrets.json
-        secrets = load_secrets("secrets.json")
+        secrets = load_secrets()
 
 
         # Stap 2: Sensor uitlezen
