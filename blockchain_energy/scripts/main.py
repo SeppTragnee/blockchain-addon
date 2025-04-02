@@ -70,7 +70,8 @@ if __name__ == "__main__":
     log("Certification gestart", "info")
     try:
         # Stap 1: Geheime variabelen laden uit secrets.json
-        secrets = load_secrets()
+        secrets = load_secrets("secrets.json")
+
 
         # Stap 2: Sensor uitlezen
         sensor_id = "sensor.smart_meter_63a_energia_real_consumida"
