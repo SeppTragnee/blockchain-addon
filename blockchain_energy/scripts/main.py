@@ -1,51 +1,91 @@
 import requests
+import base64
 import json
-import os
 import time
+import yaml
+from requests.auth import HTTPBasicAuth
 
-BLOCKCHAIN_API_URL = "http://84.88.154.234:3000"
-PRIVATE_KEY = os.getenv("BLOCKCHAIN_PRIVATE_KEY", "your_private_key_here")
-ADDRESS = "0xbb678ed4adb678bad4b8f7203135ae1854463a7f"
-
-HA_API_URL = "http://supervisor/core/api/states/sensor.smart_meter_63a_energia_real_consumida"
-SUPERVISOR_TOKEN = os.getenv("SUPERVISOR_TOKEN")
-
-HEADERS = {
-    "Authorization": f"Bearer {SUPERVISOR_TOKEN}",
-    "Content-Type": "application/json"
-}
-
-def get_energy_usage():
-    try:
-        response = requests.get(HA_API_URL, headers=HEADERS)
-        print(f"HA response status: {response.status_code}")  # Duidelijker
-        data = response.json()
-        energy_state = data.get("state", None)
-        print(f"Energie state ontvangen: {energy_state}")
-        return energy_state
-    except Exception as e:
-        print(f"Error fetching energy data: {e}")
-        return None
-
-def certify_to_blockchain(energy_data):
-    payload = {
-        "private_key": PRIVATE_KEY,
-        "address": ADDRESS,
-        "data": energy_data
+def log(msg, level="info"):
+    symbols = {
+        "info": "[i]",
+        "success": "[✓]",
+        "warning": "[!]",
+        "error": "[x]"
     }
-    try:
-        response = requests.post(f"{BLOCKCHAIN_API_URL}/certify", json=payload)
-        print(f"Blockchain Response [{response.status_code}]: {response.text}")
-    except Exception as e:
-        print(f"Error sending data to blockchain: {e}")
+    print(f"{symbols.get(level, '[ ]')} {msg}")
+
+def load_secrets(path="/config/secrets.yaml"):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
+def get_sensor_value(sensor_id, ha_url, token):
+    url = f"{ha_url}/api/states/{sensor_id}"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+    response = requests.get(url, headers=headers, timeout=10)
+    response.raise_for_status()
+    return response.json()["state"]
+
+def generate_unique_certified_string(sensor_value: str) -> str:
+    timestamp_seconds = int(time.time())
+    payload = {
+        "data": f"smart_meter_Wh_{sensor_value}",
+        "timestamp": timestamp_seconds
+    }
+    return json.dumps(payload)
+
+def get_login_hash(message, blockchain_url, address):
+    endpoint = f"{blockchain_url}/login?address={address}&message={message}"
+    response = requests.get(endpoint, timeout=30)
+    response.raise_for_status()
+    json_data = response.json()
+    login_hash = json_data.get("hash")
+    username = f'{json_data["address"]}/{json_data["timestamp"]}/{json_data["message"]}'
+    return login_hash, username
+
+def sign_hash(hash_value, blockchain_url, private_key):
+    endpoint = f"{blockchain_url}/login/signMessage"
+    payload = {"hash": hash_value, "key": private_key}
+    response = requests.post(endpoint, json=payload, timeout=60)
+    response.raise_for_status()
+    return response.text.strip()
+
+def certify_energy_data(username, password, certified_string, blockchain_url):
+    endpoint = f"{blockchain_url}/certificationVerified/certify"
+    payload = {
+        "certifiedString": certified_string,
+        "description": "Certified from Home Assistant"
+    }
+
+    response = requests.post(
+        endpoint,
+        json=payload,
+        auth=HTTPBasicAuth(username, password),
+        timeout=60
+    )
+    response.raise_for_status()
+    return response.json()
 
 if __name__ == "__main__":
-    print("==> Script gestart")
-    while True:
-        energy_data = get_energy_usage()
-        if energy_data:
-            print(f"Energy Data: {energy_data} kWh - verzenden naar blockchain...")
-            certify_to_blockchain(energy_data)
-        else:
-            print("Geen energiedata ontvangen, controleer sensor en token.")
-        time.sleep(60)
+    log("Certification gestart", "info")
+    try:
+        secrets = load_secrets()
+        sensor_id = "sensor.smart_meter_63a_energia_real_consumida"
+        sensor_value = get_sensor_value(sensor_id, "http://localhost:8123", secrets["ha_token"])
+        log(f"Sensorwaarde: {sensor_value} Wh", "info")
+
+        certified_string = generate_unique_certified_string(sensor_value)
+
+        login_hash, username = get_login_hash(certified_string, secrets["blockchain_url"], secrets["address"])
+        log(f"Login hash: {login_hash}", "info")
+
+        signed_hash = sign_hash(login_hash, secrets["blockchain_url"], secrets["private_key"])
+        log(f"Signed hash: {signed_hash}", "info")
+
+        result = certify_energy_data(username, signed_hash, certified_string, secrets["blockchain_url"])
+        log(f"✓ Succesvol! transactionHash: {result.get('transactionHash')}", "success")
+
+    except Exception as e:
+        log(f"Fout: {e}", "error")
