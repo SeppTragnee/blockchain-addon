@@ -2,7 +2,7 @@ import requests
 import base64
 import json
 import time
-import yaml
+import os
 from requests.auth import HTTPBasicAuth
 
 def log(msg, level="info"):
@@ -13,10 +13,6 @@ def log(msg, level="info"):
         "error": "[x]"
     }
     print(f"{symbols.get(level, '[ ]')} {msg}")
-
-def load_secrets(path="/config/secrets.yaml"):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
 
 def get_sensor_value(sensor_id, ha_url, token):
     url = f"{ha_url}/api/states/{sensor_id}"
@@ -71,20 +67,24 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
 if __name__ == "__main__":
     log("Certification gestart", "info")
     try:
-        secrets = load_secrets()
         sensor_id = "sensor.smart_meter_63a_energia_real_consumida"
-        sensor_value = get_sensor_value(sensor_id, "http://localhost:8123", secrets["ha_token"])
+        blockchain_url = os.environ["BLOCKCHAIN_URL"]
+        private_key = os.environ["PRIVATE_KEY"]
+        address = os.environ["ADDRESS"]
+        ha_token = os.environ["HA_TOKEN"]
+
+        sensor_value = get_sensor_value(sensor_id, "http://localhost:8123", ha_token)
         log(f"Sensorwaarde: {sensor_value} Wh", "info")
 
         certified_string = generate_unique_certified_string(sensor_value)
 
-        login_hash, username = get_login_hash(certified_string, secrets["blockchain_url"], secrets["address"])
+        login_hash, username = get_login_hash(certified_string, blockchain_url, address)
         log(f"Login hash: {login_hash}", "info")
 
-        signed_hash = sign_hash(login_hash, secrets["blockchain_url"], secrets["private_key"])
+        signed_hash = sign_hash(login_hash, blockchain_url, private_key)
         log(f"Signed hash: {signed_hash}", "info")
 
-        result = certify_energy_data(username, signed_hash, certified_string, secrets["blockchain_url"])
+        result = certify_energy_data(username, signed_hash, certified_string, blockchain_url)
         log(f"✓ Succesvol! transactionHash: {result.get('transactionHash')}", "success")
 
     except Exception as e:
