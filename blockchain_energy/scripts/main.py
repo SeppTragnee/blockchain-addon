@@ -1,7 +1,7 @@
+import os
 import requests
 import json
 import time
-import os
 from requests.auth import HTTPBasicAuth
 
 def log(msg, level="info"):
@@ -53,6 +53,7 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
         "certifiedString": certified_string,
         "description": "Certified from Home Assistant"
     }
+
     response = requests.post(
         endpoint,
         json=payload,
@@ -63,39 +64,41 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
     return response.json()
 
 if __name__ == "__main__":
+    print("Starting Blockchain Energy Certifier...")
     log("Certification gestart", "info")
 
+    # 🌐 Lees alle omgevingsvariabelen
+    blockchain_url = os.environ.get("BLOCKCHAIN_URL")
+    private_key = os.environ.get("PRIVATE_KEY")
+    address = os.environ.get("ADDRESS")
+    ha_token = os.environ.get("HA_TOKEN")
+    sensor_id = os.environ.get("SENSOR_ID")
+    ha_url = "http://localhost:8123"
+
+    # 🔒 Controleer op ontbrekende variabelen
+    if not all([blockchain_url, private_key, address, ha_token, sensor_id]):
+        log("Niet alle vereiste omgevingsvariabelen zijn ingevuld.", "error")
+        exit(1)
+
     try:
-        # 🔐 Gegevens ophalen uit omgevingsvariabelen (via shell_command)
-        blockchain_url = os.environ.get("BLOCKCHAIN_URL")
-        private_key = os.environ.get("PRIVATE_KEY")
-        address = os.environ.get("ADDRESS")
-        ha_token = os.environ.get("HA_TOKEN")
-        sensor_id = os.environ.get("SENSOR_ID")
-        ha_url = "http://localhost:8123"
-
-        if not all([blockchain_url, private_key, address, ha_token, sensor_id]):
-            raise ValueError("Niet alle vereiste omgevingsvariabelen zijn ingevuld.")
-
-        # 📊 Stap 1: Sensor uitlezen
+        # Stap 1: Haal de sensorwaarde op
         sensor_value = get_sensor_value(sensor_id, ha_url, ha_token)
         log(f"Sensorwaarde: {sensor_value} Wh", "info")
 
-        # 🧾 Stap 2: Unieke string aanmaken
+        # Stap 2: Genereer een unieke string
         certified_string = generate_unique_certified_string(sensor_value)
 
-        # 🔑 Stap 3: Login hash ophalen
+        # Stap 3: Haal de login hash op
         login_hash, username = get_login_hash(certified_string, blockchain_url, address)
         log(f"Login hash: {login_hash}", "info")
 
-        # ✍️ Stap 4: Ondertekenen
+        # Stap 4: Onderteken de hash
         signed_hash = sign_hash(login_hash, blockchain_url, private_key)
         log(f"Signed hash: {signed_hash}", "info")
 
-        # ✅ Stap 5: Certificeren
+        # Stap 5: Verstuur certificatie
         result = certify_energy_data(username, signed_hash, certified_string, blockchain_url)
         log(f"✓ Succesvol! transactionHash: {result.get('transactionHash')}", "success")
 
     except Exception as e:
         log(f"Fout: {e}", "error")
-
