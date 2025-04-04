@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
     # 🔒 Controleer op ontbrekende variabelen
     if not all([blockchain_url, private_key, address, ha_token, sensor_id]):
-        log("Niet alle vereiste omgevingsvariabelen zijn ingevuld.", "error")
+        log("Not all required environment variables are filled in.", "error")
         exit(1)
 
     try:
