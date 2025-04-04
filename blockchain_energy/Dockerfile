@@ -1,12 +1,13 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-#instalem python, pip i llibreries que necessitarem
+# Installeer python, pip en de benodigde libraries
 RUN apt update \
     && apt install -y dos2unix python3 python3-pip \
     && pip install --upgrade pip \
+    && pip install requests PyYAML
 
-# Kopieer bestanden naar container
+# Kopieer bestanden naar de container
 COPY run.sh /run.sh
 COPY scripts /scripts
 COPY config.yaml /config.yaml
