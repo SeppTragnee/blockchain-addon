@@ -21,5 +21,3 @@ map:
 privileged:
   - env
 
-environment:
-  BLOCKCHAIN_PRIVATE_KEY: "!secret blockchain_private_key"
