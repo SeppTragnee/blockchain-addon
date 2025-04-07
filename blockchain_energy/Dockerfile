@@ -1,19 +1,19 @@
 ARG BUILD_FROM
 FROM ${BUILD_FROM}
 
-# Installeer python, pip en de benodigde libraries
+# Zorg dat we bash & python en pip kunnen gebruiken
 RUN apt update \
-    && apt install -y dos2unix python3 python3-pip \
+    && apt install -y bash dos2unix python3 python3-pip \
     && pip install --upgrade pip \
-    && pip install requests PyYAML
+    && pip install requests pandas PyYAML
 
-# Kopieer bestanden naar de container
+# Voeg je bestanden toe
 COPY run.sh /run.sh
-COPY scripts /scripts
+COPY scripts/ /scripts/
 COPY config.yaml /config.yaml
 
-# Permissies instellen
+# Maak script uitvoerbaar
 RUN chmod +x /run.sh
 
-# Start add-on
+# Start je add-on met run.sh
 CMD [ "/run.sh" ]
