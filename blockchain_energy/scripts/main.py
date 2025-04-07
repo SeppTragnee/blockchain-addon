@@ -21,8 +21,7 @@ def load_secrets(path="/share/secrets.json"):
 def get_sensor_value(sensor_id):
     """Haal de waarde van de sensor op via de interne Supervisor API."""
     token = os.environ.get("SUPERVISOR_TOKEN")
-    if not token:
-        raise EnvironmentError("SUPERVISOR_TOKEN niet gevonden in omgevingsvariabelen.")
+    print(token)
     
     url = f"http://supervisor/core/api/states/{sensor_id}"
     headers = {
