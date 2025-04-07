@@ -1,6 +1,7 @@
 import requests
 import json
 import time
+import os
 from requests.auth import HTTPBasicAuth
 
 def log(msg, level="info"):
@@ -17,9 +18,13 @@ def load_secrets(path="/share/secrets.json"):
     with open(path, "r") as f:
         return json.load(f)
 
-def get_sensor_value(sensor_id, ha_url, token):
-    """Haal de waarde van de sensor op van Home Assistant."""
-    url = f"{ha_url}/api/states/{sensor_id}"
+def get_sensor_value(sensor_id):
+    """Haal de waarde van de sensor op via de interne Supervisor API."""
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    if not token:
+        raise EnvironmentError("SUPERVISOR_TOKEN niet gevonden in omgevingsvariabelen.")
+    
+    url = f"http://supervisor/core/api/states/{sensor_id}"
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json"
@@ -72,20 +77,19 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
     return response.json()
 
 if __name__ == "__main__":
-    log("Certification gestart", "info")
+    log("Certificatie gestart", "info")
     try:
-        # Laad geheime gegevens
+        # Laad alleen relevante secrets (zonder ha_token)
         secrets = load_secrets()
 
-        # Haal sensorwaarde op
-        sensor_id = secrets["sensor_id"]
-        sensor_value = get_sensor_value(sensor_id, "http://localhost:8123", secrets["ha_token"])
-        log(f"Sensorwaarde: {sensor_value} Wh", "info")
+        # Haal sensorwaarde op via interne API
+        sensor_value = get_sensor_value(secrets["sensor_id"])
+        log(f"Sensorwaarde: {sensor_value}", "info")
 
-        # Genereer gecertificeerde string
+        # Genereer string met sensorwaarde + tijdstip
         certified_string = generate_unique_certified_string(sensor_value)
 
-        # Haal login hash op
+        # Vraag login hash aan
         login_hash, username = get_login_hash(certified_string, secrets["blockchain_url"], secrets["address"])
         log(f"Login hash: {login_hash}", "info")
 
@@ -95,7 +99,8 @@ if __name__ == "__main__":
 
         # Certificeer de data
         result = certify_energy_data(username, signed_hash, certified_string, secrets["blockchain_url"])
-        log(f"✓ Succesvol! transactionHash: {result.get('transactionHash')}", "success")
+        log(f"✓ Succesvol gecertificeerd! Transaction hash: {result.get('transactionHash')}", "success")
 
     except Exception as e:
         log(f"Fout: {e}", "error")
+
