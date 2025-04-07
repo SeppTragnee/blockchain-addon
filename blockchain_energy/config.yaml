@@ -18,6 +18,4 @@ ingress: false
 map:
   - share:rw
 
-privileged:
-  - env
 
