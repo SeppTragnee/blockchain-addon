@@ -11,5 +11,9 @@ homeassistant_api: true
 startup: services
 init: false
 ingress: false
+#acces a carpetes del sistema no es borra en reiniciar addon son fora el container
+map:
+  - share:rw
 environment:
   BLOCKCHAIN_PRIVATE_KEY: "!secret blockchain_private_key"
+  
