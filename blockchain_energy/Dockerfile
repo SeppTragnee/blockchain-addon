@@ -13,7 +13,7 @@ COPY scripts/ /scripts/
 COPY config.yaml /config.yaml
 
 # Maak script uitvoerbaar
-RUN chmod +x /run.sh
+RUN chmod a+x /run.sh
 
 # Start je add-on met run.sh
 CMD [ "/run.sh" ]
