@@ -79,17 +79,17 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
 if __name__ == "__main__":
     log("Certificatie gestart", "info")
     try:
-        # Laad alleen relevante secrets (zonder ha_token)
+        # Laad secrets (zonder ha_token)
         secrets = load_secrets()
 
-        # Haal sensorwaarde op via interne API
+        # Haal sensorwaarde op via interne API met SUPERVISOR_TOKEN
         sensor_value = get_sensor_value(secrets["sensor_id"])
         log(f"Sensorwaarde: {sensor_value}", "info")
 
-        # Genereer string met sensorwaarde + tijdstip
+        # Genereer string
         certified_string = generate_unique_certified_string(sensor_value)
 
-        # Vraag login hash aan
+        # Login hash ophalen
         login_hash, username = get_login_hash(certified_string, secrets["blockchain_url"], secrets["address"])
         log(f"Login hash: {login_hash}", "info")
 
