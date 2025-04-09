@@ -2,6 +2,7 @@ import requests
 import json
 import time
 import os
+from datetime import datetime
 from requests.auth import HTTPBasicAuth
 
 def log(msg, level="info"):
@@ -21,8 +22,6 @@ def load_secrets(path="/share/secrets.json"):
 def get_sensor_value(sensor_id):
     """Haal de waarde van de sensor op via de interne Supervisor API."""
     token = os.environ.get("SUPERVISOR_TOKEN")
-    print(token)
-    
     url = f"http://supervisor/core/api/states/{sensor_id}"
     headers = {
         "Authorization": f"Bearer {token}",
@@ -75,30 +74,67 @@ def certify_energy_data(username, password, certified_string, blockchain_url):
     response.raise_for_status()
     return response.json()
 
+def update_home_assistant_helpers(sensor_value, transaction_hash):
+    """Update de Home Assistant helpers met de gecertificeerde gegevens."""
+    token = os.environ.get("SUPERVISOR_TOKEN")
+    ha_url = "http://supervisor/core/api/states"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json"
+    }
+
+    # 1. Energie-waarde updaten
+    requests.post(
+        f"{ha_url}/input_number.gecertificeerde_energie",
+        headers=headers,
+        json={"state": str(sensor_value)}
+    )
+
+    # 2. Hash opslaan
+    requests.post(
+        f"{ha_url}/input_text.certificatie_hash",
+        headers=headers,
+        json={"state": transaction_hash}
+    )
+
+    # 3. Tijdstip instellen
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    requests.post(
+        f"{ha_url}/input_datetime.laatste_certificatie",
+        headers=headers,
+        json={"state": timestamp}
+    )
+
+    log("Home Assistant helpers geüpdatet", "success")
+
 if __name__ == "__main__":
     log("Certificatie gestart", "info")
     try:
-        # Laad secrets (zonder ha_token)
+        # 1. Secrets laden
         secrets = load_secrets()
 
-        # Haal sensorwaarde op via interne API met SUPERVISOR_TOKEN
+        # 2. Sensorwaarde ophalen
         sensor_value = get_sensor_value(secrets["sensor_id"])
         log(f"Sensorwaarde: {sensor_value}", "info")
 
-        # Genereer string
+        # 3. Unieke string genereren
         certified_string = generate_unique_certified_string(sensor_value)
 
-        # Login hash ophalen
+        # 4. Login hash ophalen
         login_hash, username = get_login_hash(certified_string, secrets["blockchain_url"], secrets["address"])
         log(f"Login hash: {login_hash}", "info")
 
-        # Onderteken de hash
+        # 5. Hash ondertekenen
         signed_hash = sign_hash(login_hash, secrets["blockchain_url"], secrets["private_key"])
         log(f"Signed hash: {signed_hash}", "info")
 
-        # Certificeer de data
+        # 6. Certificeren
         result = certify_energy_data(username, signed_hash, certified_string, secrets["blockchain_url"])
         log(f"✓ Succesvol gecertificeerd! Transaction hash: {result.get('transactionHash')}", "success")
+
+        # 7. Update helpers
+        update_home_assistant_helpers(sensor_value, result.get("transactionHash"))
 
     except Exception as e:
         log(f"Fout: {e}", "error")
