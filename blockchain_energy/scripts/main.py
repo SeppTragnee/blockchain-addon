@@ -3,6 +3,10 @@ import json
 import time
 import os
 from requests.auth import HTTPBasicAuth
+from datetime import datetime
+
+# Locatie van het logbestand in Home Assistant
+LOG_PATH = "/config/www/log_certificatie.txt"
 
 def log(msg, level="info"):
     symbols = {
@@ -11,7 +15,18 @@ def log(msg, level="info"):
         "warning": "[!]",
         "error": "[x]"
     }
-    print(f"{symbols.get(level, '[ ]')} {msg}")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    formatted = f"{timestamp} {symbols.get(level, '[ ]')} {msg}"
+
+    # Print naar terminal
+    print(formatted)
+
+    # Append naar logbestand
+    try:
+        with open(LOG_PATH, "a") as f:
+            f.write(formatted + "\n")
+    except Exception as file_error:
+        print(f"[!] Kon log niet wegschrijven: {file_error}")
 
 def load_secrets(path="/share/secrets.json"):
     """Laad de secrets uit een bestand."""
@@ -102,4 +117,3 @@ if __name__ == "__main__":
 
     except Exception as e:
         log(f"Fout: {e}", "error")
-
